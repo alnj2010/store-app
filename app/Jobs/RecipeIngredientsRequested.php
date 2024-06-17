@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Ingredient;
-use App\Models\PurchasesHistory;
+use App\Models\Purchase;
 use Http;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -48,7 +48,7 @@ class RecipeIngredientsRequested implements ShouldQueue
                         'quantity' => $quantity_sold
                     ]);
 
-                    PurchasesHistory::create([
+                    Purchase::create([
                         'name_ingredient' => $ordered_ingredient['name'],
                         'quantity' => $quantity_sold
                     ]);

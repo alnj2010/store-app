@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class PurchasesHistory extends Model
+class Purchase extends Model
 {
     use HasFactory;
 
@@ -14,6 +14,5 @@ class PurchasesHistory extends Model
      *
      * @var string
      */
-    protected $table = 'purchases_history';
     protected $fillable = ['name_ingredient', 'quantity'];
 }

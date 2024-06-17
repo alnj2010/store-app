@@ -16,16 +16,16 @@ class RecipeIngredientsRequested implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private $recipeIngredients;
-    public function __construct($recipeIngredients) // TODO typing
+    private $order;
+    public function __construct($order) // TODO typing
     {
         $this->onQueue('requested_ingredients');
-        $this->recipeIngredients = $recipeIngredients;
+        $this->order = $order;
     }
     public function handle(): void
     {
-        Log::debug('--------enter with', $this->recipeIngredients);
-        $ordered_ingredients = $this->recipeIngredients['ingredients'];
+        Log::debug('--------enter with', $this->order);
+        $ordered_ingredients = $this->order['ingredients'];
         $results = [];
 
         $has_all_ingredients = true;
@@ -72,7 +72,7 @@ class RecipeIngredientsRequested implements ShouldQueue
                 $result['model']->save();
                 Log::debug($result['name'] . " require " . $result['quantity'] . " and there are " . $result['model']->quantity . ' remaining');
             }
-            RecipeIngredientsPurchased::dispatch($this->recipeIngredients);
+            RecipeIngredientsPurchased::dispatch(["id" => $this->order["id"]]);
         } else {
             foreach ($results as $result) {
                 if ($result['is_purchased']) {

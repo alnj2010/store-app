@@ -12,11 +12,11 @@ class RecipeIngredientsPurchased implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private $recipeIngredients;
-    public function __construct($recipeIngredients) // TODO typing
+    private $order;
+    public function __construct($order) // TODO typing
     {
         $this->onQueue('purchased_ingredients');
-        $this->recipeIngredients = $recipeIngredients;
+        $this->order = $order;
     }
     /**
      * Execute the job.

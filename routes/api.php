@@ -1,13 +1,10 @@
 <?php
 
-use App\Models\Purchase;
-use Illuminate\Http\Request;
+use App\Http\Controllers\IngredientController;
+use App\Http\Controllers\PurchaseController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/purchases', function (Request $request) {
-    return Purchase::simplePaginate(6);
-});
 
-Route::get('/ingredients', function (Request $request) {
-    return Purchase::simplePaginate(6);
-});
+Route::apiResource('purchases', PurchaseController::class)->only(['index']);
+
+Route::apiResource('ingredients', IngredientController::class)->only(['index']);

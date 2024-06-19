@@ -9,6 +9,7 @@ class PurchaseController extends Controller
 {
     public function index(Request $request)
     {
-        return Purchase::simplePaginate(10);
+        $per_page = $request->query('perPage') ?? 10;
+        return Purchase::orderBy("id","desc")->paginate($per_page);
     }
 }

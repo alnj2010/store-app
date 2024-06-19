@@ -9,6 +9,7 @@ class IngredientController extends Controller
 {
     public function index(Request $request)
     {
+    
         return Ingredient::simplePaginate(10);
     }
 }

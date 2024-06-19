@@ -1,7 +1,7 @@
 <?php
 
 return [
-
+    'service_api_key' => env('SERVICE_API_KEY'),
     /*
     |--------------------------------------------------------------------------
     | Application Name

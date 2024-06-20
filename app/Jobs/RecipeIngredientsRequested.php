@@ -3,9 +3,9 @@
 namespace App\Jobs;
 
 use App\Actions\GroceryStoreService;
+use App\Jobs\RecipeIngredientsPurchased;
 use App\Models\Ingredient;
-use App\Models\Purchase;
-use Http;
+
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -27,53 +27,63 @@ class RecipeIngredientsRequested implements ShouldQueue
 
     public function handle(GroceryStoreService $groceryStoreService): void
     {
-        $TIME_TO_WAIT_FOR_PRODUCTS=1;
-        $ordered_ingredients = $this->order['ingredients'];
-        $results = [];
+        $TIME_TO_WAIT_FOR_PRODUCTS = 3;
 
         $has_all_ingredients = true;
-        foreach ($ordered_ingredients as $ordered_ingredient) {
-            $ingredient = Ingredient::firstWhere('name_ingredient', $ordered_ingredient['name']);
-
-            $ordered_ingredient['model'] = $ingredient;
-            $ordered_ingredient['is_purchased'] = $ingredient->quantity < $ordered_ingredient['quantity'];
-
-
-            if (!$ordered_ingredient['is_purchased']) {
-                $ingredient->quantity -= $ordered_ingredient['quantity'];
-            } else {
-                $quantity_sold = $groceryStoreService->handle($ordered_ingredient['name']);
-                if ($quantity_sold > 0) {
-                    Purchase::create([
-                        'name_ingredient' => $ordered_ingredient['name'],
-                        'quantity' => $quantity_sold
-                    ]);
-                }
-                $ingredient->quantity += $quantity_sold;
-
-                if ($ingredient->quantity >= $ordered_ingredient['quantity']) {
-                    $ingredient->quantity -= $ordered_ingredient['quantity'];
-                } else {
-                    $has_all_ingredients = false;
-                }
+        $this->order['ingredients'] = array_map(function ($required) use ($groceryStoreService, &$has_all_ingredients) {
+            $quantity_required = $required["quantity"];
+            $name = $required["name"];
+            $was_obtained = $required["was_obtained"];
+            if ($was_obtained) {
+                return [
+                    'name' => $name,
+                    'quantity' => $quantity_required,
+                    'was_obtained' => true
+                ];
             }
 
+            $store = Ingredient::firstWhere('name_ingredient', $name);
 
-            array_push($results, $ordered_ingredient);
-        }
+            if ($store->quantity >= $quantity_required) {
+                $store->quantity -= $quantity_required;
+                $store->save();
+                return [
+                    'name' => $name,
+                    'quantity' => $quantity_required,
+                    'was_obtained' => true
+                ];
+            }
+
+            $quantity_sold = $groceryStoreService->handle($name);
+            $store->quantity += $quantity_sold;
+
+            if ($store->quantity >= $quantity_required) {
+                $store->quantity -= $quantity_required;
+                $store->save();
+                return [
+                    'name' => $name,
+                    'quantity' => $quantity_required,
+                    'was_obtained' => true
+                ];
+            }
+
+            $store->save();
+            $has_all_ingredients = false;
+            return [
+                'name' => $name,
+                'quantity' => $quantity_required,
+                'was_obtained' => false
+            ];
+
+        }, $this->order['ingredients']);
+
 
         if ($has_all_ingredients) {
-            foreach ($results as $result) {
-                $result['model']->save();
-            }
             RecipeIngredientsPurchased::dispatch(["id" => $this->order["id"]]);
         } else {
-            foreach ($results as $result) {
-                if ($result['is_purchased']) {
-                    $result['model']->save();
-                }
-            }
-            $this->release(now()->addSeconds($TIME_TO_WAIT_FOR_PRODUCTS));
+            sleep($TIME_TO_WAIT_FOR_PRODUCTS);
+            RecipeIngredientsRequested::dispatch($this->order);
+
         }
 
     }

@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Actions\GroceryStoreService;
 use App\Models\Ingredient;
 use App\Models\Purchase;
 use Http;
@@ -17,14 +18,16 @@ class RecipeIngredientsRequested implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     private $order;
-    public function __construct($order) // TODO typing
+    public function __construct($order)
     {
         $this->onQueue('requested_ingredients');
         $this->order = $order;
     }
-    public function handle(): void
+
+
+    public function handle(GroceryStoreService $groceryStoreService): void
     {
-        Log::debug('--------enter with', $this->order);
+        $TIME_TO_WAIT_FOR_PRODUCTS=1;
         $ordered_ingredients = $this->order['ingredients'];
         $results = [];
 
@@ -39,21 +42,13 @@ class RecipeIngredientsRequested implements ShouldQueue
             if (!$ordered_ingredient['is_purchased']) {
                 $ingredient->quantity -= $ordered_ingredient['quantity'];
             } else {
-                $quantity_sold = Http::get('https://recruitment.alegra.com/api/farmers-market/buy', [
-                    'ingredient' => $ordered_ingredient['name'],
-                ])['quantitySold'];
+                $quantity_sold = $groceryStoreService->handle($ordered_ingredient['name']);
                 if ($quantity_sold > 0) {
-                    Log::debug('Save history ->', [
-                        'name_ingredient' => $ordered_ingredient['name'],
-                        'quantity' => $quantity_sold
-                    ]);
-
                     Purchase::create([
                         'name_ingredient' => $ordered_ingredient['name'],
                         'quantity' => $quantity_sold
                     ]);
                 }
-                Log::debug($quantity_sold . " quantity of " . $ordered_ingredient['name'] . " was purchased ");
                 $ingredient->quantity += $quantity_sold;
 
                 if ($ingredient->quantity >= $ordered_ingredient['quantity']) {
@@ -70,7 +65,6 @@ class RecipeIngredientsRequested implements ShouldQueue
         if ($has_all_ingredients) {
             foreach ($results as $result) {
                 $result['model']->save();
-                Log::debug($result['name'] . " require " . $result['quantity'] . " and there are " . $result['model']->quantity . ' remaining');
             }
             RecipeIngredientsPurchased::dispatch(["id" => $this->order["id"]]);
         } else {
@@ -79,10 +73,8 @@ class RecipeIngredientsRequested implements ShouldQueue
                     $result['model']->save();
                 }
             }
-            Log::debug('--------release 1');
-            $this->release(now()->addSeconds(1));
+            $this->release(now()->addSeconds($TIME_TO_WAIT_FOR_PRODUCTS));
         }
-        Log::debug('--------End--------------------');
 
     }
 }
